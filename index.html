@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<!-- Better Dictation landing page (GitHub Pages). Same structure/methodology as the
+     Easy Capture To Text / Easy Audio Capture landing pages; warm gold accent to give
+     BD its own identity. The hero "demo" is a CSS/JS mock of the live preview bubble
+     typing into a chat box (deterministic loop) so the page looks alive without a GIF. -->
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Better Dictation: talk, and it types. Anywhere.</title>
+<meta name="description" content="Press a hotkey (or just say 'start dictating') and your words type themselves into whatever you're working in. Live preview, voice commands, smart formatting, and a fully offline engine. Windows 10/11."/>
+<style>
+  :root{
+    --bg:#12100b; --panel:#191612; --panel2:#211c15; --line:#2e2820; --edge:#57492e;
+    --ink:#f4eee2; --muted:#b3a68d; --accent:#f2b544; --accent2:#d99b2b; --ok:#34d97b; --rec:#ff5a5a;
+    --seg:#6db3ff;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font-family:'Segoe UI',system-ui,-apple-system,Arial,sans-serif;line-height:1.55}
+  a{color:var(--accent);text-decoration:none}
+  .wrap{max-width:960px;margin:0 auto;padding:0 20px}
+  .badge{display:inline-block;font-size:12px;font-weight:600;color:var(--accent);
+         border:1px solid var(--edge);border-radius:999px;padding:4px 12px;background:#2a2214}
+
+  /* hero */
+  header{padding:64px 0 40px;text-align:center;position:relative;overflow:hidden}
+  header::before{content:"";position:absolute;inset:-40% -20% auto;height:520px;pointer-events:none;
+       background:radial-gradient(closest-side, rgba(242,181,68,.10), transparent 70%)}
+  header>*{position:relative}
+  .logo{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:18px}
+  .logo svg{width:52px;height:52px}
+  .logo h1{font-size:30px;margin:0;letter-spacing:.2px}
+  h2.tag{font-size:40px;line-height:1.15;margin:14px auto 10px;max-width:720px}
+  h2.tag .hl{color:var(--accent)}
+  .sub{color:var(--muted);font-size:18px;max-width:660px;margin:0 auto 26px}
+  .cta{display:inline-flex;align-items:center;gap:10px;background:var(--ok);
+       color:#06210c;font-weight:700;font-size:17px;padding:14px 28px;border-radius:12px;
+       box-shadow:0 6px 24px rgba(52,217,123,.22)}
+  .cta:hover{filter:brightness(1.08)}
+  .ctahint{color:var(--muted);font-size:13px;margin-top:10px}
+
+  /* hero demo: preview bubble typing into a chat box */
+  .demo{margin:36px auto 0;max-width:700px;text-align:left}
+  .bubble{position:relative;margin:0 auto 14px;max-width:560px;background:var(--panel2);
+        border:1px solid var(--edge);border-radius:14px;padding:14px 16px 12px;
+        box-shadow:0 18px 60px rgba(0,0,0,.45)}
+  .bubble::after{content:"";position:absolute;left:50%;bottom:-9px;width:16px;height:16px;
+        background:var(--panel2);border-right:1px solid var(--edge);border-bottom:1px solid var(--edge);
+        transform:translateX(-50%) rotate(45deg)}
+  .bubble-top{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-bottom:8px}
+  .bubble-live{color:var(--rec);font-weight:700;animation:blink 1.2s ease infinite}
+  @keyframes blink{50%{opacity:.25}}
+  .bubble-text{min-height:44px;font-size:15.5px;line-height:1.5}
+  .bubble-text .seg-a{color:var(--seg)}
+  .bubble-text .seg-b{color:var(--ink)}
+  .caret{display:inline-block;width:2px;height:1.05em;background:var(--accent);
+        vertical-align:-2px;margin-left:2px;animation:blink .9s step-end infinite}
+  .mock-chat{max-width:640px;margin:0 auto;border:1px solid var(--edge);border-radius:14px;
+        background:#161310;overflow:hidden}
+  .mock-top{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--panel2);
+        border-bottom:1px solid var(--line);font-size:13px;color:var(--muted)}
+  .dot{width:11px;height:11px;border-radius:50%;display:inline-block}
+  .dot.r{background:#ff5f57}.dot.y{background:#febc2e}.dot.g{background:#28c840}
+  .mock-title{margin-left:8px;font-weight:600;color:var(--ink)}
+  .mock-box{display:flex;align-items:flex-end;gap:10px;padding:14px}
+  .mock-input{flex:1;min-height:46px;background:var(--panel);border:1px solid var(--line);
+        border-radius:10px;padding:11px 13px;font-size:14.5px;color:var(--ink)}
+  .mock-send{flex:0 0 auto;background:var(--accent2);color:#241a06;font-weight:700;font-size:13.5px;
+        border-radius:9px;padding:11px 16px;transition:transform .15s, filter .15s}
+  .mock-send.sent{transform:scale(1.08);filter:brightness(1.25)}
+  @media(prefers-reduced-motion:reduce){.bubble-live,.caret{animation:none}}
+
+  /* sections */
+  section{padding:46px 0;border-top:1px solid var(--line)}
+  h3.sh{color:var(--accent);font-size:13px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 18px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+  @media(max-width:680px){h2.tag{font-size:30px}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+  .card h4{margin:0 0 6px;font-size:16px;color:var(--accent)}
+  .card p{margin:0;color:var(--muted);font-size:14px}
+  .strip{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);
+        border-radius:14px;padding:16px 20px;margin-top:16px;color:var(--muted);font-size:14px}
+  .strip b{color:var(--ink)}
+
+  /* recover band */
+  .band{background:linear-gradient(135deg,#2a2214,var(--panel));border:1px solid var(--edge);
+        border-radius:16px;padding:26px 28px}
+  .band h4{margin:0 0 8px;font-size:22px}
+  .band h4 .k{color:var(--accent)}
+  .band p{margin:0;color:var(--muted);font-size:15px;max-width:760px}
+
+  /* checklists */
+  .why{display:grid;grid-template-columns:1fr 1fr;gap:14px 28px}
+  @media(max-width:680px){.why{grid-template-columns:1fr}}
+  .why div{padding-left:26px;position:relative;color:var(--muted);font-size:15px}
+  .why div::before{content:"✓";position:absolute;left:0;color:var(--ok);font-weight:700}
+  .why b{color:var(--ink)}
+  .wall{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px 24px}
+  @media(max-width:760px){.wall{grid-template-columns:1fr 1fr}}
+  @media(max-width:520px){.wall{grid-template-columns:1fr}}
+  .wall div{padding-left:22px;position:relative;color:var(--muted);font-size:13.5px}
+  .wall div::before{content:"✓";position:absolute;left:0;color:var(--accent);font-weight:700}
+
+  /* steps */
+  .steps{counter-reset:s;display:grid;gap:14px;margin:0;padding:0}
+  .steps li{list-style:none;padding-left:44px;position:relative;color:var(--muted)}
+  .steps li::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:-2px;
+       width:28px;height:28px;border-radius:50%;background:#2a2214;border:1px solid var(--accent);
+       color:var(--accent);font-weight:700;display:flex;align-items:center;justify-content:center;font-size:14px}
+  .steps b{color:var(--ink)}
+
+  /* voice commands */
+  .keys{display:grid;grid-template-columns:1fr 1fr;gap:10px 28px}
+  @media(max-width:680px){.keys{grid-template-columns:1fr}}
+  .keys div{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:14px}
+  .kbd{display:inline-block;font:600 12px/1 Consolas,monospace;color:var(--accent);white-space:nowrap;
+       background:#2a2214;border:1px solid var(--edge);border-radius:6px;padding:5px 8px}
+
+  .faq h4{margin:18px 0 4px;font-size:16px}
+  .faq p{margin:0;color:var(--muted);font-size:14px}
+  .faq b{color:var(--ink)}
+  footer{padding:34px 0;border-top:1px solid var(--line);color:var(--muted);font-size:13px;text-align:center}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="logo">
+      <!-- rounded mark: microphone + sound arcs, in the app's warm gold -->
+      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="1" y="1" width="30" height="30" rx="8" fill="#1a1610" stroke="#2e2820"/>
+        <rect x="13" y="6" width="6" height="12" rx="3" fill="#f2b544"/>
+        <path d="M9.5 14a6.5 6.5 0 0 0 13 0" stroke="#f2b544" stroke-width="2" stroke-linecap="round" fill="none"/>
+        <path d="M16 20.5V25" stroke="#f2b544" stroke-width="2" stroke-linecap="round"/>
+        <path d="M12 25h8" stroke="#f2b544" stroke-width="2" stroke-linecap="round"/>
+        <path d="M23.5 6.5c1.4 1.7 1.4 4.3 0 6" stroke="#d99b2b" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+        <path d="M8.5 6.5c-1.4 1.7-1.4 4.3 0 6" stroke="#d99b2b" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+      </svg>
+      <h1>Better Dictation</h1>
+    </div>
+
+    <span class="badge">Free 14-day full trial · Windows 10/11 · One small exe</span>
+    <h2 class="tag">Talk, and it types. <span class="hl">Anywhere.</span></h2>
+    <p class="sub">Press a hotkey — or just say <i>"start dictating"</i> — and your words land
+       live in whatever you're working in: email, chat, docs, code. With a preview bubble,
+       voice commands, smart formatting, and a fully offline engine.</p>
+
+    <a class="cta" href="https://github.com/CoreInnovation/Better_Dictation-Releases/releases/latest/download/BetterDictation.exe">⬇ Download for Windows</a>
+    <div class="ctahint">Full trial, then the everyday dictation core stays free forever · no account · installs itself in about a second, no admin needed</div>
+
+    <div class="demo" aria-hidden="true">
+      <div class="bubble">
+        <div class="bubble-top">🎙️ Better Dictation <span class="bubble-live">● listening</span></div>
+        <div class="bubble-text" id="bubbleText"><span class="caret"></span></div>
+      </div>
+      <div class="mock-chat">
+        <div class="mock-top">
+          <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+          <span class="mock-title">💬 Chat — the group thread</span>
+        </div>
+        <div class="mock-box">
+          <div class="mock-input" id="mockInput"></div>
+          <div class="mock-send" id="mockSend">Send ➤</div>
+        </div>
+      </div>
+    </div>
+  </header>
+</div>
+
+<div class="wrap">
+  <section>
+    <h3 class="sh">What it does</h3>
+    <div class="grid">
+      <div class="card"><h4>⌨ Types into anything</h4>
+        <p>Your words arrive as real typing in whatever has your cursor — email, chat apps,
+           documents, browsers, code editors. No per-app setup, no pasting.</p></div>
+      <div class="card"><h4>🫧 Live preview bubble</h4>
+        <p>Watch your sentence build as you speak, with each phrase color-coded so you can
+           see exactly what just landed before it's committed.</p></div>
+      <div class="card"><h4>🗣 Hands-free wake phrases</h4>
+        <p>Say <i>"start dictating"</i> to begin and <i>"stop dictating"</i> to end — no hotkey,
+           no hands. Perfect mid-task, mid-sandwich, mid-anything.</p></div>
+      <div class="card"><h4>🔒 Fully offline engine</h4>
+        <p>Flip on the embedded Whisper engine and everything is transcribed right on your PC —
+           no internet, nothing leaves your machine.</p></div>
+      <div class="card"><h4>🔊 Dictate what's playing</h4>
+        <p>Point it at an <i>output</i> device and transcribe whatever your PC is playing —
+           calls, videos, podcasts, meetings.</p></div>
+      <div class="card"><h4>✨ Smart formatting</h4>
+        <p>A local AI politely rewrites your rambling into clean, send-ready text — and it can
+           read the box you're typing in so it continues your thought naturally.</p></div>
+      <div class="card"><h4>↶ Voice undo</h4>
+        <p>Say <i>"scratch that"</i> and the last phrase is removed — including from the target
+           box, verified before a single backspace is sent. <i>"Start over"</i> wipes it all.</p></div>
+      <div class="card"><h4>🎙️ Smart mic</h4>
+        <p>Every connected mic is metered live and dictation follows whichever hears you
+           loudest. Walk from your desk mic to your headset mid-sentence.</p></div>
+      <div class="card"><h4>⏳ Catch-up typing</h4>
+        <p>Dictate first, click a text box after — the held text types itself the moment focus
+           lands. With smart paste, it appends only what's missing, never duplicating.</p></div>
+      <div class="card"><h4>📸 Snip OCR</h4>
+        <p>A bonus hotkey snips any text on your screen — a screenshot, a video, an error
+           message — straight to your clipboard as text. Free, forever.</p></div>
+      <div class="card"><h4>📜 Dictation history</h4>
+        <p>Cycle back through everything you've dictated, with date and time, and copy or
+           paste any of it again.</p></div>
+      <div class="card"><h4>📋 Clipboard history</h4>
+        <p>The tray remembers your recent snips and dictations for one-click re-copying when
+           you need that thing from ten minutes ago.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="band">
+      <h4>Smart Recover: the dictation that never gets lost <span class="k">(free)</span></h4>
+      <p>Talked for five minutes, closed the bubble, lost it all? One tap brings your last
+         dictation right back. It's always kept safe on your PC — free for everyone, because
+         losing five minutes of thinking out loud should never happen to anybody.</p>
+    </div>
+  </section>
+
+  <section>
+    <h3 class="sh">Why it's different</h3>
+    <div class="why">
+      <div><b>Types anywhere.</b> Real keystrokes into any app that takes text — not a special notepad you copy out of.</div>
+      <div><b>Private option, for real.</b> The offline engine transcribes on your machine. Turn your Wi-Fi off; it keeps working.</div>
+      <div><b>Free core forever.</b> Streaming dictation, live typing, punctuation, auto-caps, voice submit, and snip OCR cost nothing.</div>
+      <div><b>Actually hands-free.</b> Wake phrases and voice commands mean a whole dictation can happen without touching the keyboard.</div>
+      <div><b>Zero friction.</b> One small exe that installs itself in about a second, updates quietly, uninstalls cleanly.</div>
+      <div><b>One-time license.</b> Pro is a single purchase. No subscription, ever.</div>
+    </div>
+  </section>
+
+  <section>
+    <h3 class="sh">Every feature, at a glance</h3>
+    <div class="wall">
+      <div>Live typing as you speak</div>
+      <div>Automatic punctuation</div>
+      <div>Auto-capitalization</div>
+      <div>Voice submit ("send it" by voice)</div>
+      <div>After-submit actions</div>
+      <div>Clear-after-submit option</div>
+      <div>Live preview bubble</div>
+      <div>Per-phrase color coding</div>
+      <div>Live silence-timeout countdown</div>
+      <div>Offline Whisper engine</div>
+      <div>Choice of model sizes</div>
+      <div>System-audio (loopback) dictation</div>
+      <div>Mix up to 8 sources in one session</div>
+      <div>Sources join/leave mid-dictation</div>
+      <div>Auto-switch to a newly plugged mic</div>
+      <div>Smart mic (loudest mic wins)</div>
+      <div>Wake phrases (start/stop by voice)</div>
+      <div>Custom aliases for every command</div>
+      <div>Voice undo with verified erase</div>
+      <div>"Start over" full reset</div>
+      <div>Smart formatting (local AI polish)</div>
+      <div>Box-context formatting</div>
+      <div>Catch-up typing</div>
+      <div>Smart paste (no duplicates)</div>
+      <div>Dictation history + cycling</div>
+      <div>Smart Recover (free)</div>
+      <div>Clipboard history in the tray</div>
+      <div>Snip OCR hotkey (free)</div>
+      <div>Rebindable global hotkeys</div>
+      <div>Quiet one-click updates</div>
+      <div>One-second self-install, no admin</div>
+      <div>One-time Pro license, no subscription</div>
+    </div>
+  </section>
+
+  <section>
+    <h3 class="sh">How it works</h3>
+    <ol class="steps">
+      <li><b>Download and run.</b> The exe installs itself per-user in about a second. No wizard, no admin prompt.</li>
+      <li><b>Put your cursor anywhere and press the hotkey</b> — or just say <b>"start dictating."</b></li>
+      <li><b>Talk.</b> Words land live where your cursor is. Say <b>"submit"</b> to send it,
+          <b>"scratch that"</b> to fix the last phrase, <b>"stop dictating"</b> when you're done.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h3 class="sh">Say it, don't click it</h3>
+    <div class="keys">
+      <div><span class="kbd">"start dictating"</span> Begin, hands-free</div>
+      <div><span class="kbd">"stop dictating"</span> End the session</div>
+      <div><span class="kbd">"submit"</span> Send what you've dictated</div>
+      <div><span class="kbd">"scratch that"</span> Remove the last phrase</div>
+      <div><span class="kbd">"start over"</span> Wipe it and start fresh</div>
+      <div><span class="kbd">Hotkeys too</span> Every command also has a rebindable hotkey</div>
+    </div>
+    <div class="strip"><b>Make it yours:</b> every voice command's phrase list is editable — add your own
+      aliases so it responds to the words you'd naturally say.</div>
+  </section>
+
+  <section class="faq">
+    <h3 class="sh">Questions</h3>
+    <h4>Is it free?</h4>
+    <p>You get 14 days of everything, no account needed. After that the everyday core stays free
+       forever: streaming dictation with your mic, live typing, punctuation, auto-caps, voice
+       submit, snip OCR, and Smart Recover. A one-time Pro license unlocks the power lane: the
+       offline engine, system-audio dictation, smart formatting, wake phrases, voice undo, smart
+       mic, and the full dictation history.</p>
+    <h4>Does my voice leave my PC?</h4>
+    <p>With the Pro <b>offline engine</b>, no — transcription runs entirely on your machine and
+       works with the internet off. The free streaming engine transcribes through the built-in
+       browser speech service. Either way, we never see or store your dictations; the app's only
+       phone-home is an anonymous update check you can switch off.</p>
+    <h4>Can it really type into anything?</h4>
+    <p>Yes. It sends real keystrokes to whatever has focus, so anywhere you could type, it can
+       type — chat apps, email, documents, browsers, terminals, code editors.</p>
+    <h4>Windows said "Windows protected your PC"?</h4>
+    <p>That's SmartScreen being cautious with a new, unsigned app. Click <b>More info</b>, then
+       <b>Run anyway</b>. The app installs per-user (no admin prompt) and uninstalls cleanly from
+       Settings → Apps.</p>
+    <h4>What do I need?</h4>
+    <p>Windows 10 or 11 (x64) and a microphone. The download bundles everything else — the
+       offline engine's models are built in.</p>
+  </section>
+</div>
+
+<footer>
+  <div class="wrap">
+    <div>© 2026 <a href="https://coreinnovation.github.io/">Core Innovation Concepts</a> · also by us:
+      <a href="https://coreinnovation.github.io/EasyCaptureToText-Releases/">Easy Capture To Text</a> ·
+      <a href="https://coreinnovation.github.io/EasyAudioCapture-Releases/">Easy Audio Capture</a></div>
+    <div style="margin-top:6px;opacity:.8">Better Dictation for Windows 10/11 (x64).</div>
+  </div>
+</footer>
+
+<script>
+// Hero mock: the preview bubble "hears" phrases (alternating segment colors, like the app),
+// then each phrase types itself into the chat box; "Send" pulses on the voice submit, and the
+// loop restarts. Deterministic timing; respects prefers-reduced-motion by jumping to the end.
+(function () {
+  var bubble = document.getElementById("bubbleText");
+  var input = document.getElementById("mockInput");
+  var send = document.getElementById("mockSend");
+  if (!bubble || !input || !send) return;
+
+  var phrases = [
+    "Running ten minutes late, ",
+    "grabbing coffee on the way. ",
+    "Want your usual? ",
+    "Submit."
+  ];
+  var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  if (reduced) {
+    bubble.innerHTML = '<span class="seg-a">' + phrases[0] + '</span><span class="seg-b">' + phrases[1] + '</span><span class="seg-a">' + phrases[2] + '</span>';
+    input.textContent = phrases[0] + phrases[1] + phrases[2];
+    return;
+  }
+
+  var caret = '<span class="caret"></span>';
+  var pi = 0, ci = 0, html = "", typed = "";
+
+  function step() {
+    var phrase = phrases[pi];
+    var isSubmit = pi === phrases.length - 1;
+    if (ci < phrase.length) {
+      ci++;
+      var cls = pi % 2 === 0 ? "seg-a" : "seg-b";
+      bubble.innerHTML = html + '<span class="' + cls + '">' + phrase.slice(0, ci) + "</span>" + caret;
+      if (!isSubmit) { typed = typed.slice(0, typed.length - 0); input.textContent = (html.replace(/<[^>]+>/g, "") + phrase.slice(0, ci)); }
+      setTimeout(step, isSubmit ? 55 : 38);
+    } else {
+      if (isSubmit) {
+        send.classList.add("sent");
+        setTimeout(function () {
+          send.classList.remove("sent");
+          input.textContent = "";
+          html = ""; pi = 0; ci = 0;
+          bubble.innerHTML = caret;
+          setTimeout(step, 900);
+        }, 1200);
+      } else {
+        var cls2 = pi % 2 === 0 ? "seg-a" : "seg-b";
+        html += '<span class="' + cls2 + '">' + phrase + "</span>";
+        pi++; ci = 0;
+        setTimeout(step, 650);
+      }
+    }
+  }
+  setTimeout(step, 800);
+})();
+</script>
+
+</body>
+</html>
